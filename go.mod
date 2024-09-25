@@ -1,4 +1,4 @@
-module cloud-provider-opentelekomcloud
+module github.com/opentelekomcloud/cloud-provider-opentelekomcloud
 
 go 1.23.1
 
