@@ -21,23 +21,25 @@ limitations under the License.
 package main
 
 import (
-	"k8s.io/klog/v2"
-	"os"
-
+	"encoding/json"
+	"fmt"
 	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/cloud-provider/app"
 	"k8s.io/cloud-provider/app/config"
 	"k8s.io/cloud-provider/names"
 	"k8s.io/cloud-provider/options"
-	"k8s.io/component-base/cli"
 	cliflag "k8s.io/component-base/cli/flag"
-	_ "k8s.io/component-base/logs/json/register"          // register optional JSON log format
-	_ "k8s.io/component-base/metrics/prometheus/clientgo" // load all the prometheus client-go plugins
-	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
-
+	"k8s.io/component-base/logs"
+	_ "k8s.io/component-base/logs/json/register"            // register optional JSON log format
+	_ "k8s.io/component-base/metrics/prometheus/clientgo"   // load all the prometheus client-go plugins
 	_ "k8s.io/component-base/metrics/prometheus/restclient" // for client metric registration
-	_ "k8s.io/kubernetes/pkg/features"                      // add the kubernetes feature gates
+	_ "k8s.io/component-base/metrics/prometheus/version"    // for version metric registration
+	"k8s.io/klog/v2"
+	_ "k8s.io/kubernetes/pkg/features" // add the kubernetes feature gates
+	"os"
+
+	_ "github.com/opentelekomcloud/cloud-provider-opentelekomcloud/pkg/opentelekomcloud"
 )
 
 func main() {
@@ -47,37 +49,20 @@ func main() {
 	}
 
 	fss := cliflag.NamedFlagSets{}
-	command := app.NewCloudControllerManagerCommand(ccmOptions, cloudInitializer, controllerInitializers(), names.CCMControllerAliases(), fss, wait.NeverStop)
-	code := cli.Run(command)
-	os.Exit(code)
-}
+	command := app.NewCloudControllerManagerCommand(ccmOptions, cloudInitializer, app.DefaultInitFuncConstructors, names.CCMControllerAliases(), fss, wait.NeverStop)
 
-// If custom ClientNames are used, as below, then the controller will not use
-// the API server bootstrapped RBAC, and instead will require it to be installed
-// separately.
-func controllerInitializers() map[string]app.ControllerInitFuncConstructor {
-	controllerInitializers := app.DefaultInitFuncConstructors
-	if constructor, ok := controllerInitializers[names.CloudNodeController]; ok {
-		constructor.InitContext.ClientName = "mycloud-external-cloud-node-controller"
-		controllerInitializers[names.CloudNodeController] = constructor
+	logs.InitLogs()
+	defer logs.FlushLogs()
+
+	if err := command.Execute(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
-	if constructor, ok := controllerInitializers[names.CloudNodeLifecycleController]; ok {
-		constructor.InitContext.ClientName = "mycloud-external-cloud-node-lifecycle-controller"
-		controllerInitializers[names.CloudNodeLifecycleController] = constructor
-	}
-	if constructor, ok := controllerInitializers[names.ServiceLBController]; ok {
-		constructor.InitContext.ClientName = "mycloud-external-service-controller"
-		controllerInitializers[names.ServiceLBController] = constructor
-	}
-	if constructor, ok := controllerInitializers[names.NodeRouteController]; ok {
-		constructor.InitContext.ClientName = "mycloud-external-route-controller"
-		controllerInitializers[names.NodeRouteController] = constructor
-	}
-	return controllerInitializers
 }
 
 func cloudInitializer(config *config.CompletedConfig) cloudprovider.Interface {
 	cloudConfig := config.ComponentConfig.KubeCloudShared.CloudProvider
+	jsonPrint("CloudConfig: ", cloudConfig)
 
 	// initialize cloud provider with the cloud provider name and config file provided
 	cloud, err := cloudprovider.InitCloudProvider(cloudConfig.Name, cloudConfig.CloudConfigFile)
@@ -95,5 +80,15 @@ func cloudInitializer(config *config.CompletedConfig) cloudprovider.Interface {
 			klog.Fatalf("no ClusterID found.  A ClusterID is required for the cloud provider to function properly.  This check can be bypassed by setting the allow-untagged-cloud option")
 		}
 	}
+
 	return cloud
+}
+
+func jsonPrint(s string, a any) {
+	b, err := json.Marshal(a)
+	if err != nil {
+		klog.ErrorDepth(1, fmt.Sprintf("Error Marshal: %s", err))
+		return
+	}
+	klog.Infof("%s%s", s, string(b))
 }
