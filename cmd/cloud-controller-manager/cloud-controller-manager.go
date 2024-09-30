@@ -43,6 +43,8 @@ import (
 )
 
 func main() {
+	logs.InitLogs()
+	defer logs.FlushLogs()
 	ccmOptions, err := options.NewCloudControllerManagerOptions()
 	if err != nil {
 		klog.Fatalf("unable to initialize command options: %v", err)
@@ -50,9 +52,6 @@ func main() {
 
 	fss := cliflag.NamedFlagSets{}
 	command := app.NewCloudControllerManagerCommand(ccmOptions, cloudInitializer, app.DefaultInitFuncConstructors, names.CCMControllerAliases(), fss, wait.NeverStop)
-
-	logs.InitLogs()
-	defer logs.FlushLogs()
 
 	if err := command.Execute(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)

@@ -1,0 +1,22 @@
+linters-settings:
+  staticcheck:
+    checks:
+      - all
+      # Exclude some staticcheck messages
+      - '-SA1008' # "content-length" is not canonical
+      - '-SA1019' # deprecations, deprecation warnings
+run:
+  timeout: 5m
+  # Exclude vendor and any other system-level directories
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - errcheck
+    - gofmt
+    - ineffassign
+    - misspell
+    - unused
+    - unconvert
+    - whitespace
