@@ -45,6 +45,7 @@ import (
 func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
+
 	ccmOptions, err := options.NewCloudControllerManagerOptions()
 	if err != nil {
 		klog.Fatalf("unable to initialize command options: %v", err)
