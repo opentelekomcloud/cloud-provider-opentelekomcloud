@@ -19,10 +19,6 @@ func init() {
 	})
 }
 
-type CloudProvider struct {
-	cloudprovider.Interface
-}
-
 func NewOTC(cfg io.Reader) (*CloudProvider, error) {
 	return &CloudProvider{}, nil
 }
