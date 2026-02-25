@@ -2,13 +2,11 @@ name: CI
 
 on:
   pull_request:
-    types:
-      - opened
-      - edited
-      - synchronize
+    types: [opened, synchronize]
+  workflow_dispatch:
 
 env:
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.25'
 
 jobs:
   lint:
@@ -20,9 +18,9 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.53.3
+          version: v2.10.1
 
   vet:
     name: vet
@@ -34,10 +32,20 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
       - run: make vet
 
+  unit_tests:
+    name: unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: make test
+
   eco_check:
     name: eco/check
     if: always()
-    needs: [lint, vet]
+    needs: [lint, vet, unit_tests]
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
