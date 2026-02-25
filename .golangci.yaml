@@ -8,7 +8,6 @@ linters:
   enable:
     - asciicheck
     - errcheck
-    - gofmt
     - ineffassign
     - misspell
     - unused
@@ -20,3 +19,7 @@ linters:
         - all
         - '-SA1008' # "content-length" is not canonical
         - '-SA1019' # deprecations, deprecation warnings
+
+formatters:
+  enable:
+    - gofmt
