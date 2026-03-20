@@ -1,14 +1,25 @@
-* **Please check if the PR fulfills these requirements**
-- [ ] The commit message follows our guidelines
-- [ ] Tests for the changes have been added (for bug fixes / features)
-- [ ] Docs have been added / updated (for bug fixes / features)
+## Summary
 
-* **What kind of change does this PR introduce?** (Bug fix, feature, docs update, ...)
+<!-- What does this PR do? Which issue does it close? -->
 
-* **What is the current behavior?** (You can also link to an open issue here)
+Closes #
 
-* **What is the new behavior (if this is a feature change)?**
+## Changes
 
-* **Does this PR introduce a breaking change?** (What changes might users need to make in their application due to this PR?)
+<!-- List the main changes -->
 
-* **Other information**:
+- 
+
+## Testing
+
+<!-- How was this tested? -->
+
+- [ ] Unit tests pass (`make test`)
+- [ ] Tested on OTC region `eu-ch2` (if applicable)
+- [ ] No hardcoded credentials or sensitive data
+
+## Checklist
+
+- [ ] Code follows Go conventions (`make fmt`, `make vet`)
+- [ ] Tests added or updated
+- [ ] Documentation updated (if needed)
