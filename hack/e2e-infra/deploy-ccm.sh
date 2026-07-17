@@ -17,8 +17,6 @@ SUBNET_ID=$("${TF}" output -raw subnet_id)
 VPC_ID=$("${TF}" output -raw vpc_id)
 AZ=$("${TF}" output -raw availability_zone)
 
-AUTH_URL=${AUTH_URL:-https://iam.eu-de.otc.t-systems.com/v3}
-REGION=${REGION:-eu-de}
 IMAGE=cloud-provider-opentelekomcloud:e2e
 KUBECONFIG_FILE=${KUBECONFIG_FILE:-./kubeconfig}
 KUBECTL="kubectl --kubeconfig=${KUBECONFIG_FILE}"
@@ -56,9 +54,18 @@ if auth.get("project_id"):
     export("OS_PROJECT_ID", auth["project_id"])
 if auth.get("domain_name") or auth.get("user_domain_name"):
     export("OS_DOMAIN_NAME", auth.get("domain_name") or auth["user_domain_name"])
+if auth.get("auth_url"):
+    export("OS_AUTH_URL", auth["auth_url"])
+if cloud.get("region_name"):
+    export("OS_REGION_NAME", cloud["region_name"])
 EOF
 )"
 fi
+
+# Endpoint defaults follow the clouds.yaml entry so the cloud-config talks to
+# the same cloud the credentials belong to.
+AUTH_URL=${AUTH_URL:-${OS_AUTH_URL:-https://iam.eu-de.otc.t-systems.com/v3}}
+REGION=${REGION:-${OS_REGION_NAME:-eu-de}}
 
 # --- cloud-config ---
 CLOUD_CONFIG=$(mktemp)
