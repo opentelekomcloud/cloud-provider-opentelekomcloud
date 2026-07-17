@@ -5,6 +5,9 @@ on:
     types: [opened, synchronize]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   GO_VERSION: '1.25'
 
