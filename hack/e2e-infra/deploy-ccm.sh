@@ -73,26 +73,30 @@ AUTH_URL=${AUTH_URL:-${OS_AUTH_URL:-https://iam.eu-de.otc.t-systems.com/v3}}
 REGION=${REGION:-${OS_REGION_NAME:-eu-de}}
 
 # --- cloud-config ---
+# gcfg silently truncates unquoted values at '#'/';' and errors on '"'/'\',
+# so every credential value is double-quoted with those escaped.
+q() { local v=${1//\\/\\\\}; printf '"%s"' "${v//\"/\\\"}"; }
+
 CLOUD_CONFIG=$(mktemp)
 trap 'rm -f "${CLOUD_CONFIG}"' EXIT
-cat > "${CLOUD_CONFIG}" <<EOF
-[Global]
-auth-url=${AUTH_URL}
-region=${REGION}
-username=${OS_USERNAME:-}
-password=${OS_PASSWORD:-}
-access-key=${OS_ACCESS_KEY:-}
-secret-key=${OS_SECRET_KEY:-}
-tenant-name=${OS_PROJECT_NAME:-}
-project-id=${OS_PROJECT_ID:-}
-domain-name=${OS_DOMAIN_NAME:-}
-domain-id=${OS_DOMAIN_ID:-}
-
-[LoadBalancer]
-subnet-id=${SUBNET_ID}
-vpc-id=${VPC_ID}
-availability-zone=${AZ}
-EOF
+{
+  echo "[Global]"
+  echo "auth-url=$(q "${AUTH_URL}")"
+  echo "region=$(q "${REGION}")"
+  echo "username=$(q "${OS_USERNAME:-}")"
+  echo "password=$(q "${OS_PASSWORD:-}")"
+  echo "access-key=$(q "${OS_ACCESS_KEY:-}")"
+  echo "secret-key=$(q "${OS_SECRET_KEY:-}")"
+  echo "tenant-name=$(q "${OS_PROJECT_NAME:-}")"
+  echo "project-id=$(q "${OS_PROJECT_ID:-}")"
+  echo "domain-name=$(q "${OS_DOMAIN_NAME:-}")"
+  echo "domain-id=$(q "${OS_DOMAIN_ID:-}")"
+  echo
+  echo "[LoadBalancer]"
+  echo "subnet-id=${SUBNET_ID}"
+  echo "vpc-id=${VPC_ID}"
+  echo "availability-zone=${AZ}"
+} > "${CLOUD_CONFIG}"
 
 # MODE=image builds a container image (needs docker) and deploys the
 # manifests; MODE=binary cross-compiles the binary and runs it on the node
