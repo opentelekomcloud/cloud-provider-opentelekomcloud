@@ -98,8 +98,8 @@ func TestAKSKProvider_Authenticate(t *testing.T) {
 
 	opts := config.AuthOpts{
 		AuthURL:    server.URL + "/v3",
-		AccessKey:  "AKIAIOSFODNN7EXAMPLE",
-		SecretKey:  "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		AccessKey:  "test-access-key",
+		SecretKey:  "test-secret-key",
 		ProjectID:  "test-project-id",
 		DomainName: "test-domain",
 		Region:     "eu-de",
@@ -115,8 +115,8 @@ func TestAKSKProvider_Authenticate(t *testing.T) {
 		t.Fatalf("unexpected error authenticating: %v", err)
 	}
 
-	if client.AKSKAuthOptions.AccessKey != "AKIAIOSFODNN7EXAMPLE" {
-		t.Errorf("AccessKey = %q, want %q", client.AKSKAuthOptions.AccessKey, "AKIAIOSFODNN7EXAMPLE")
+	if client.AKSKAuthOptions.AccessKey != "test-access-key" {
+		t.Errorf("AccessKey = %q, want %q", client.AKSKAuthOptions.AccessKey, "test-access-key")
 	}
 
 	// Verify SDK-HMAC-SHA256 headers were used in requests
@@ -130,7 +130,7 @@ func TestAKSKProvider_Authenticate(t *testing.T) {
 		}
 	}
 	if !foundHMAC {
-		t.Errorf("expected SDK-HMAC-SHA256 Authorization header in requests, got: %v", authHeaders)
+		t.Errorf("expected SDK-HMAC-SHA256 Authorization header in requests, got %d headers, none matching", len(authHeaders))
 	}
 }
 

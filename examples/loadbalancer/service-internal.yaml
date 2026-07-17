@@ -1,0 +1,18 @@
+---
+# Internal load balancer: reachable on the VPC-private VIP only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-internal
+  annotations:
+    loadbalancer.opentelekomcloud.com/health-check-protocol: "HTTP"
+    loadbalancer.opentelekomcloud.com/health-check-url-path: "/"
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-demo
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80

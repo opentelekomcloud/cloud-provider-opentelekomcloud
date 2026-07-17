@@ -1,0 +1,34 @@
+# Cloud configuration for the Open Telekom Cloud cloud controller manager.
+#
+# Fill in the values and create the secret before deploying the manager:
+#   kubectl create secret -n kube-system generic cloud-config --from-file=manifests/cloud-config
+#
+# Authentication: either access-key/secret-key (recommended) or
+# username/password. See docs/auth-configuration.md for all options.
+
+[Global]
+auth-url=https://iam.eu-de.otc.t-systems.com/v3
+region=eu-de
+domain-name=<OTC domain name, e.g. OTC00000000001000000xxx>
+tenant-name=<project name, e.g. eu-de_myproject>
+# AK/SK auth:
+access-key=<access key>
+secret-key=<secret key>
+# ...or password auth:
+#username=<user name>
+#password=<password>
+
+[LoadBalancer]
+# Neutron subnet ID for the load balancer VIP (required to create LBs).
+subnet-id=<subnet id>
+# VPC (router) ID.
+vpc-id=<vpc id>
+# One or more availability zones for dedicated load balancers.
+availability-zone=eu-de-01
+#availability-zone=eu-de-02
+# Optional defaults, see docs/loadbalancer.md:
+#lb-algorithm=ROUND_ROBIN
+#health-check-enabled=true
+#health-check-delay=5
+#health-check-timeout=3
+#health-check-max-retries=3

@@ -9,8 +9,8 @@ import (
 func TestNewIdentityProvider_AKSK(t *testing.T) {
 	opts := config.AuthOpts{
 		AuthURL:   "https://iam.eu-de.otc.t-systems.com/v3",
-		AccessKey: "AKIAIOSFODNN7EXAMPLE",
-		SecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		AccessKey: "test-access-key",
+		SecretKey: "test-secret-key",
 		Region:    "eu-de",
 	}
 

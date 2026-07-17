@@ -79,21 +79,12 @@ func (p *passwordProvider) GetProvider(_ context.Context) (*golangsdk.ProviderCl
 	return p.client, nil
 }
 
-func (p *passwordProvider) GetServiceClient(ctx context.Context, _ string, opts golangsdk.EndpointOpts) (*golangsdk.ServiceClient, error) {
+func (p *passwordProvider) GetServiceClient(ctx context.Context, service string, opts golangsdk.EndpointOpts) (*golangsdk.ServiceClient, error) {
 	provider, err := p.GetProvider(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	endpoint, err := provider.EndpointLocator(opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to locate endpoint: %w", err)
-	}
-
-	return &golangsdk.ServiceClient{
-		ProviderClient: provider,
-		Endpoint:       endpoint,
-	}, nil
+	return newServiceClient(provider, service, opts)
 }
 
 func (p *passwordProvider) AuthMethod() string {
