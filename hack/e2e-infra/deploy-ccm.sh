@@ -24,9 +24,9 @@ KUBECTL="kubectl --kubeconfig=${KUBECONFIG_FILE}"
 [ -f "${KUBECONFIG_FILE}" ] || ./fetch-kubeconfig.sh
 
 # --- credentials ---
-# Prefer username/password with project scope from clouds.yaml; fall back to
-# AK/SK from the environment. The generated cloud-config uses whichever is
-# available (the provider itself prefers AK/SK when both are set).
+# Export every credential the clouds.yaml entry provides; the generated
+# cloud-config carries them all and the provider picks by its own priority
+# (AK/SK > username/password).
 if [ -z "${OS_USERNAME:-}" ] && [ -z "${OS_ACCESS_KEY:-}" ]; then
   echo "no credentials in env, reading clouds.yaml (OS_CLOUD=${OS_CLOUD:-})"
   # Every value is shlex.quote()d: an unquoted secret with spaces or shell
@@ -38,22 +38,27 @@ cloud = yaml.safe_load(open(path))["clouds"][os.environ["OS_CLOUD"]]
 auth = cloud.get("auth", {})
 def export(name, value):
     print(f"export {name}={shlex.quote(str(value))}")
+have_creds = False
 if auth.get("username") and auth.get("password"):
     export("OS_USERNAME", auth["username"])
     export("OS_PASSWORD", auth["password"])
-else:
-    ak = cloud.get("ak") or auth.get("ak")
-    sk = cloud.get("sk") or auth.get("sk")
-    if not ak or not sk:
-        raise SystemExit("no usable credentials in clouds.yaml entry")
+    have_creds = True
+ak = cloud.get("ak") or auth.get("ak")
+sk = cloud.get("sk") or auth.get("sk")
+if ak and sk:
     export("OS_ACCESS_KEY", ak)
     export("OS_SECRET_KEY", sk)
+    have_creds = True
+if not have_creds:
+    raise SystemExit("no usable credentials in clouds.yaml entry")
 if auth.get("project_name"):
     export("OS_PROJECT_NAME", auth["project_name"])
 if auth.get("project_id"):
     export("OS_PROJECT_ID", auth["project_id"])
 if auth.get("domain_name") or auth.get("user_domain_name"):
     export("OS_DOMAIN_NAME", auth.get("domain_name") or auth["user_domain_name"])
+if auth.get("domain_id") or auth.get("user_domain_id"):
+    export("OS_DOMAIN_ID", auth.get("domain_id") or auth["user_domain_id"])
 if auth.get("auth_url"):
     export("OS_AUTH_URL", auth["auth_url"])
 if cloud.get("region_name"):
@@ -81,6 +86,7 @@ secret-key=${OS_SECRET_KEY:-}
 tenant-name=${OS_PROJECT_NAME:-}
 project-id=${OS_PROJECT_ID:-}
 domain-name=${OS_DOMAIN_NAME:-}
+domain-id=${OS_DOMAIN_ID:-}
 
 [LoadBalancer]
 subnet-id=${SUBNET_ID}
