@@ -16,7 +16,7 @@ cd hack/e2e-infra
 export OS_CLOUD=<clouds.yaml entry>          # credentials for terraform/tofu
 export SSH_ARGS="-i ~/.ssh/<key>"            # if not your default key
 
-cp terraform.tfvars.example terraform.tfvars # adjust subnet/network IDs
+cp terraform.tfvars.example terraform.tfvars # optional: reuse an existing subnet/network
 terraform init                               # OpenTofu works too
 terraform apply
 

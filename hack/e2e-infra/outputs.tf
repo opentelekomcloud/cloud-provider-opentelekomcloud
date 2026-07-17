@@ -10,11 +10,11 @@ output "private_ip" {
 
 output "subnet_id" {
   description = "Neutron subnet ID for the cloud provider [LoadBalancer] section"
-  value       = var.subnet_id
+  value       = local.subnet_id
 }
 
 output "vpc_id" {
-  value = var.vpc_id
+  value = local.vpc_id
 }
 
 output "availability_zone" {

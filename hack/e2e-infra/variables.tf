@@ -5,13 +5,15 @@ variable "prefix" {
 }
 
 variable "network_id" {
-  description = "OTC network UUID of the subnet the node attaches to (openstack subnet list, column Network)"
+  description = "OTC network UUID of an existing subnet the node attaches to (openstack subnet list, column Network); leave empty to create a disposable VPC + subnet"
   type        = string
+  default     = ""
 }
 
 variable "subnet_id" {
-  description = "Neutron subnet UUID used by the cloud provider for load balancer VIPs (openstack subnet list, column ID)"
+  description = "Neutron subnet UUID used by the cloud provider for load balancer VIPs (openstack subnet list, column ID); leave empty together with network_id to create one"
   type        = string
+  default     = ""
 }
 
 variable "vpc_id" {
