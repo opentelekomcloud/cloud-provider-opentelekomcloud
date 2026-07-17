@@ -1,0 +1,20 @@
+---
+# Public load balancer: a dedicated EIP (100 Mbit/s) is created together with
+# the load balancer and released again when the Service is deleted.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-public
+  annotations:
+    loadbalancer.opentelekomcloud.com/eip-bandwidth: "100"
+    loadbalancer.opentelekomcloud.com/idle-timeout: "300"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: nginx-demo
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80

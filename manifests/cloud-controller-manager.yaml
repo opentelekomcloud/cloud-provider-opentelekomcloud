@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otc-cloud-controller-manager
+  namespace: kube-system
+  labels:
+    app: otc-cloud-controller-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otc-cloud-controller-manager
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: otc-cloud-controller-manager
+    spec:
+      serviceAccountName: cloud-controller-manager
+      hostNetwork: true
+      securityContext:
+        runAsUser: 1001
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: Exists
+      tolerations:
+        - key: node.cloudprovider.kubernetes.io/uninitialized
+          value: "true"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      containers:
+        - name: cloud-controller-manager
+          # Replace with the released image of this provider.
+          image: cloud-provider-opentelekomcloud:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - /bin/cloud-provider-opentelekomcloud
+            - --v=2
+            - --cloud-provider=opentelekomcloud
+            - --cloud-config=/etc/config/cloud-config
+            - --use-service-account-credentials=true
+            - --leader-elect=true
+            # Only the service (load balancer) controller is supported for
+            # now; node controllers require the Instances API.
+            - --controllers=service
+          resources:
+            requests:
+              cpu: 200m
+              memory: 100Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: cloud-config
+              mountPath: /etc/config
+              readOnly: true
+            - name: ca-certs
+              mountPath: /etc/ssl/certs
+              readOnly: true
+      volumes:
+        - name: cloud-config
+          secret:
+            secretName: cloud-config
+        - name: ca-certs
+          hostPath:
+            path: /etc/ssl/certs
+            type: DirectoryOrCreate

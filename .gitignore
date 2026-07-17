@@ -83,3 +83,18 @@ go.work
 
 # local gopath
 .go
+
+# Terraform (e2e stand)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+terraform.tfvars
+
+# Local cluster configs and e2e stand artifacts
+kubeconfig
+hack/e2e-infra/cloud-provider-opentelekomcloud
+
+# Env files with credentials
+.env
+*.env

@@ -5,7 +5,9 @@ go 1.25.5
 require (
 	github.com/opentelekomcloud/gophertelekomcloud v0.9.5
 	gopkg.in/gcfg.v1 v1.2.3
+	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
+	k8s.io/client-go v0.35.0
 	k8s.io/cloud-provider v0.35.0
 	k8s.io/component-base v0.35.0
 	k8s.io/klog/v2 v2.130.1
@@ -96,10 +98,8 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.35.0 // indirect
 	k8s.io/apiextensions-apiserver v0.0.0 // indirect
 	k8s.io/apiserver v0.35.0 // indirect
-	k8s.io/client-go v0.35.0 // indirect
 	k8s.io/component-helpers v0.35.0 // indirect
 	k8s.io/controller-manager v0.35.0 // indirect
 	k8s.io/kms v0.35.0 // indirect
