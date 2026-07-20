@@ -11,6 +11,33 @@ terraform {
 # Credentials come from clouds.yaml; select the entry with OS_CLOUD.
 provider "opentelekomcloud" {}
 
+# Disposable VPC + subnet, created only when no existing network_id is
+# supplied. CIDRs sit inside the default var.vpc_cidr (10.0.0.0/8) so the
+# security group rules below cover them.
+resource "opentelekomcloud_vpc_v1" "vpc" {
+  count = var.network_id == "" ? 1 : 0
+  name  = "${var.prefix}-vpc"
+  cidr  = "10.36.0.0/16"
+}
+
+resource "opentelekomcloud_vpc_subnet_v1" "subnet" {
+  count         = var.network_id == "" ? 1 : 0
+  name          = "${var.prefix}-subnet"
+  vpc_id        = opentelekomcloud_vpc_v1.vpc[0].id
+  cidr          = "10.36.0.0/24"
+  gateway_ip    = "10.36.0.1"
+  primary_dns   = "100.125.4.25"
+  secondary_dns = "100.125.129.199"
+}
+
+locals {
+  # OTC quirk: a VPC subnet's ID is the neutron *network* UUID, while the
+  # neutron subnet UUID is exposed as its subnet_id attribute.
+  network_id = var.network_id != "" ? var.network_id : opentelekomcloud_vpc_subnet_v1.subnet[0].id
+  subnet_id  = var.subnet_id != "" ? var.subnet_id : opentelekomcloud_vpc_subnet_v1.subnet[0].subnet_id
+  vpc_id     = var.vpc_id != "" ? var.vpc_id : (var.network_id == "" ? opentelekomcloud_vpc_v1.vpc[0].id : "")
+}
+
 resource "opentelekomcloud_networking_floatingip_v2" "node" {
   pool = "admin_external_net"
 }
@@ -80,11 +107,15 @@ resource "opentelekomcloud_compute_instance_v2" "node" {
   })
 
   network {
-    uuid = var.network_id
+    uuid = local.network_id
   }
 }
 
-resource "opentelekomcloud_compute_floatingip_associate_v2" "node" {
+data "opentelekomcloud_networking_port_v2" "node" {
+  device_id = opentelekomcloud_compute_instance_v2.node.id
+}
+
+resource "opentelekomcloud_networking_floatingip_associate_v2" "node" {
   floating_ip = opentelekomcloud_networking_floatingip_v2.node.address
-  instance_id = opentelekomcloud_compute_instance_v2.node.id
+  port_id     = data.opentelekomcloud_networking_port_v2.node.id
 }

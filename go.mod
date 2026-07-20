@@ -3,7 +3,7 @@ module github.com/opentelekomcloud/cloud-provider-opentelekomcloud
 go 1.25.5
 
 require (
-	github.com/opentelekomcloud/gophertelekomcloud v0.9.5
+	github.com/opentelekomcloud/gophertelekomcloud v0.9.8
 	gopkg.in/gcfg.v1 v1.2.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0

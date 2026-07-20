@@ -17,8 +17,6 @@ SUBNET_ID=$("${TF}" output -raw subnet_id)
 VPC_ID=$("${TF}" output -raw vpc_id)
 AZ=$("${TF}" output -raw availability_zone)
 
-AUTH_URL=${AUTH_URL:-https://iam.eu-de.otc.t-systems.com/v3}
-REGION=${REGION:-eu-de}
 IMAGE=cloud-provider-opentelekomcloud:e2e
 KUBECONFIG_FILE=${KUBECONFIG_FILE:-./kubeconfig}
 KUBECTL="kubectl --kubeconfig=${KUBECONFIG_FILE}"
@@ -26,9 +24,9 @@ KUBECTL="kubectl --kubeconfig=${KUBECONFIG_FILE}"
 [ -f "${KUBECONFIG_FILE}" ] || ./fetch-kubeconfig.sh
 
 # --- credentials ---
-# Prefer username/password with project scope from clouds.yaml; fall back to
-# AK/SK from the environment. The generated cloud-config uses whichever is
-# available (the provider itself prefers AK/SK when both are set).
+# Export every credential the clouds.yaml entry provides; the generated
+# cloud-config carries them all and the provider picks by its own priority
+# (AK/SK > username/password).
 if [ -z "${OS_USERNAME:-}" ] && [ -z "${OS_ACCESS_KEY:-}" ]; then
   echo "no credentials in env, reading clouds.yaml (OS_CLOUD=${OS_CLOUD:-})"
   # Every value is shlex.quote()d: an unquoted secret with spaces or shell
@@ -40,46 +38,65 @@ cloud = yaml.safe_load(open(path))["clouds"][os.environ["OS_CLOUD"]]
 auth = cloud.get("auth", {})
 def export(name, value):
     print(f"export {name}={shlex.quote(str(value))}")
+have_creds = False
 if auth.get("username") and auth.get("password"):
     export("OS_USERNAME", auth["username"])
     export("OS_PASSWORD", auth["password"])
-else:
-    ak = cloud.get("ak") or auth.get("ak")
-    sk = cloud.get("sk") or auth.get("sk")
-    if not ak or not sk:
-        raise SystemExit("no usable credentials in clouds.yaml entry")
+    have_creds = True
+ak = cloud.get("ak") or auth.get("ak")
+sk = cloud.get("sk") or auth.get("sk")
+if ak and sk:
     export("OS_ACCESS_KEY", ak)
     export("OS_SECRET_KEY", sk)
+    have_creds = True
+if not have_creds:
+    raise SystemExit("no usable credentials in clouds.yaml entry")
 if auth.get("project_name"):
     export("OS_PROJECT_NAME", auth["project_name"])
 if auth.get("project_id"):
     export("OS_PROJECT_ID", auth["project_id"])
 if auth.get("domain_name") or auth.get("user_domain_name"):
     export("OS_DOMAIN_NAME", auth.get("domain_name") or auth["user_domain_name"])
+if auth.get("domain_id") or auth.get("user_domain_id"):
+    export("OS_DOMAIN_ID", auth.get("domain_id") or auth["user_domain_id"])
+if auth.get("auth_url"):
+    export("OS_AUTH_URL", auth["auth_url"])
+if cloud.get("region_name"):
+    export("OS_REGION_NAME", cloud["region_name"])
 EOF
 )"
 fi
 
+# Endpoint defaults follow the clouds.yaml entry so the cloud-config talks to
+# the same cloud the credentials belong to.
+AUTH_URL=${AUTH_URL:-${OS_AUTH_URL:-https://iam.eu-de.otc.t-systems.com/v3}}
+REGION=${REGION:-${OS_REGION_NAME:-eu-de}}
+
 # --- cloud-config ---
+# gcfg silently truncates unquoted values at '#'/';' and errors on '"'/'\',
+# so every credential value is double-quoted with those escaped.
+q() { local v=${1//\\/\\\\}; printf '"%s"' "${v//\"/\\\"}"; }
+
 CLOUD_CONFIG=$(mktemp)
 trap 'rm -f "${CLOUD_CONFIG}"' EXIT
-cat > "${CLOUD_CONFIG}" <<EOF
-[Global]
-auth-url=${AUTH_URL}
-region=${REGION}
-username=${OS_USERNAME:-}
-password=${OS_PASSWORD:-}
-access-key=${OS_ACCESS_KEY:-}
-secret-key=${OS_SECRET_KEY:-}
-tenant-name=${OS_PROJECT_NAME:-}
-project-id=${OS_PROJECT_ID:-}
-domain-name=${OS_DOMAIN_NAME:-}
-
-[LoadBalancer]
-subnet-id=${SUBNET_ID}
-vpc-id=${VPC_ID}
-availability-zone=${AZ}
-EOF
+{
+  echo "[Global]"
+  echo "auth-url=$(q "${AUTH_URL}")"
+  echo "region=$(q "${REGION}")"
+  echo "username=$(q "${OS_USERNAME:-}")"
+  echo "password=$(q "${OS_PASSWORD:-}")"
+  echo "access-key=$(q "${OS_ACCESS_KEY:-}")"
+  echo "secret-key=$(q "${OS_SECRET_KEY:-}")"
+  echo "tenant-name=$(q "${OS_PROJECT_NAME:-}")"
+  echo "project-id=$(q "${OS_PROJECT_ID:-}")"
+  echo "domain-name=$(q "${OS_DOMAIN_NAME:-}")"
+  echo "domain-id=$(q "${OS_DOMAIN_ID:-}")"
+  echo
+  echo "[LoadBalancer]"
+  echo "subnet-id=${SUBNET_ID}"
+  echo "vpc-id=${VPC_ID}"
+  echo "availability-zone=${AZ}"
+} > "${CLOUD_CONFIG}"
 
 # MODE=image builds a container image (needs docker) and deploys the
 # manifests; MODE=binary cross-compiles the binary and runs it on the node

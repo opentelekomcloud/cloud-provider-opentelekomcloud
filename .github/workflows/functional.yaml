@@ -1,0 +1,103 @@
+name: functional
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.25'
+
+# One stand per PR at a time; no cancel-in-progress — a cancelled run
+# would skip terraform destroy and leak the ECS/EIP.
+concurrency:
+  group: functional-${{ github.event.pull_request.number || github.ref }}
+
+jobs:
+  e2e:
+    name: e2e tests
+    # Needs OTC credentials and provisions real cloud resources: run only
+    # for internal PRs labeled 'functional', or on manual dispatch.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'functional'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OS_CLOUD: ${{ secrets.OS_CLOUD }}
+      TF_IN_AUTOMATION: 'true'
+    defaults:
+      run:
+        working-directory: hack/e2e-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      # The wrapper breaks $(terraform output -raw ...) in the helper scripts.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Prepare cloud credentials
+        env:
+          OS_CLOUDS_YAML_CONTENT: ${{ secrets.OS_CLOUDS_CCM_YAML }}
+        run: |
+          mkdir -p ~/.config/openstack
+          printf '%s' "$OS_CLOUDS_YAML_CONTENT" > ~/.config/openstack/clouds.yaml
+          chmod 600 ~/.config/openstack/clouds.yaml
+          # deploy-ccm.sh reads credentials from clouds.yaml via PyYAML
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --user pyyaml
+
+      - name: Generate ephemeral SSH key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519
+
+      - name: Write terraform.tfvars
+        run: |
+          cat > terraform.tfvars <<EOF
+          prefix              = "ccm-e2e-${{ github.run_id }}"
+          ssh_public_key_file = "~/.ssh/id_ed25519.pub"
+          EOF
+          # The stand creates a disposable VPC/subnet unless an existing
+          # network is supplied (needed when the CI account may not create
+          # routers, as create_router is disallowed by tenant policy).
+          if [ -n "${{ vars.E2E_NETWORK_ID }}" ]; then
+            cat >> terraform.tfvars <<EOF
+          network_id = "${{ vars.E2E_NETWORK_ID }}"
+          subnet_id  = "${{ vars.E2E_SUBNET_ID }}"
+          EOF
+          fi
+
+      - name: Provision test stand
+        id: apply
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false
+
+      - name: Fetch kubeconfig
+        run: ./fetch-kubeconfig.sh
+
+      - name: Deploy cloud controller manager
+        run: MODE=binary ./deploy-ccm.sh
+
+      - name: Run e2e tests
+        env:
+          E2E_EIP_BANDWIDTH: '10'
+        run: KUBECONFIG="$PWD/kubeconfig" make -C ../.. test-e2e
+
+      - name: Show CCM logs and cluster state
+        if: failure()
+        run: |
+          IP=$(terraform output -raw public_ip)
+          ssh -o StrictHostKeyChecking=accept-new "ubuntu@${IP}" \
+            'sudo journalctl -u otc-ccm --no-pager -n 300' || true
+          KUBECONFIG="$PWD/kubeconfig" kubectl get svc,events -A || true
+
+      - name: Destroy test stand
+        if: always() && steps.apply.outcome != 'skipped'
+        run: |
+          terraform init -input=false
+          terraform destroy -auto-approve -input=false

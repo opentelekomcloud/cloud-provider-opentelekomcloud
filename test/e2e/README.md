@@ -6,7 +6,11 @@ deployment and `LoadBalancer` Services, wait for the load balancer to be
 provisioned, optionally verify HTTP reachability, and clean everything up.
 
 They are excluded from normal builds by the `e2e` build tag and never run as
-part of `make test` or CI unit tests.
+part of `make test` or CI unit tests. In CI the `functional` workflow runs
+them for internal pull requests labeled `functional` (or via manual
+dispatch): it provisions the disposable stand from
+[`hack/e2e-infra`](../../hack/e2e-infra), runs the tests and destroys the
+stand afterwards.
 
 ## Prerequisites
 

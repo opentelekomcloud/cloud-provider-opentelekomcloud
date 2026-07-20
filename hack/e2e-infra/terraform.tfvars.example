@@ -1,8 +1,10 @@
-# openstack subnet list --long   ->   ID = subnet_id, Network = network_id
-network_id = "a2d7c9f1-7fd9-4943-af53-352538943ab3"
-subnet_id  = "c6e0eba4-17aa-4e16-9522-76a12969deb7"
+# Leave network_id/subnet_id unset to create a disposable VPC + subnet.
+# To reuse an existing network instead:
+#   openstack subnet list --long   ->   ID = subnet_id, Network = network_id
+#network_id = "a2d7c9f1-7fd9-4943-af53-352538943ab3"
+#subnet_id  = "c6e0eba4-17aa-4e16-9522-76a12969deb7"
 # openstack router list (VPC id), optional
-vpc_id = ""
+#vpc_id = ""
 
 availability_zone = "eu-de-01"
 # Restrict SSH/API access to your IP if desired:
